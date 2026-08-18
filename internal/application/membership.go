@@ -54,7 +54,6 @@ func (e *Engine) DiscoverTeams(ctx context.Context, filter TeamFilter) (Page[dom
 		if team.Visibility == "private" {
 			continue
 		}
-		team.InviteCode = ""
 		items = append(items, team)
 	}
 	sort.Slice(items, func(i, j int) bool {
@@ -226,4 +225,8 @@ func normalizePage(page, size int) (int, int) {
 		size = 20
 	}
 	return page, size
+}
+
+func discoveryPolicyAudit(team domain.Team) bool {
+	return team.Visibility != "private"
 }
