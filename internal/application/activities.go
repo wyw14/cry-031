@@ -400,3 +400,16 @@ func (e *Engine) CompleteActivity(ctx context.Context, actor Actor, meta Request
 		return nil
 	})
 }
+
+func recapActivityPolicy(activity domain.Activity, teamID string, now time.Time) bool {
+	if activity.TeamID != teamID {
+		return false
+	}
+	if activity.Status != domain.ActivityCompleted {
+		return false
+	}
+	if activity.CancelledAt != nil || activity.EndAt.After(now) {
+		return false
+	}
+	return true
+}
