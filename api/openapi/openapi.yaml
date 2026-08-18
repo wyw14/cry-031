@@ -1,0 +1,272 @@
+openapi: 3.0.3
+info:
+  title: 邻里同行社区志愿服务 API
+  version: 0.1.0
+  description: 离线运行的社区、小队、活动、服务记录与风险交接 API。
+servers:
+  - url: http://localhost:8080/api/v1
+paths:
+  /catalog:
+    get:
+      summary: 获取社区和服务领域字典
+      responses:
+        '200': { description: 字典列表 }
+  /discovery/teams:
+    get:
+      summary: 发现公开服务小队
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - { name: community_id, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [recruiting, paused, closed] } }
+        - { name: query, in: query, schema: { type: string } }
+        - { name: sort, in: query, schema: { type: string, enum: [created_desc, name_asc] } }
+      responses:
+        '200': { description: 分页小队列表 }
+  /teams/{teamID}/join:
+    post:
+      summary: 申请加入小队或使用邀请码加入
+      parameters: [{ $ref: '#/components/parameters/TeamID' }, { $ref: '#/components/parameters/RequestID' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { invite_code: { type: string, maxLength: 64 } }
+      responses:
+        '201': { description: 申请已创建 }
+        '403': { $ref: '#/components/responses/Error' }
+  /teams/{teamID}/transfer-captain:
+    post:
+      summary: 原子移交队长身份并保留成员事件
+      parameters: [{ $ref: '#/components/parameters/TeamID' }, { $ref: '#/components/parameters/RequestID' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_user_id, reason]
+              properties:
+                target_user_id: { type: string }
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '204': { description: 移交成功 }
+        '409': { $ref: '#/components/responses/Error' }
+  /memberships/{membershipID}/approve:
+    post:
+      summary: 负责人审批成员申请
+      parameters: [{ $ref: '#/components/parameters/MembershipID' }, { $ref: '#/components/parameters/RequestID' }]
+      responses: { '204': { description: 审批完成 }, '403': { $ref: '#/components/responses/Error' } }
+  /memberships/{membershipID}/pause:
+    post:
+      summary: 暂停或恢复成员身份
+      parameters: [{ $ref: '#/components/parameters/MembershipID' }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { pause: { type: boolean } } }
+      responses: { '204': { description: 状态已更新 } }
+  /memberships/{membershipID}/exit:
+    post:
+      summary: 退出小队并保留历史任期
+      parameters: [{ $ref: '#/components/parameters/MembershipID' }]
+      responses: { '204': { description: 已退出 }, '409': { $ref: '#/components/responses/Error' } }
+  /activities:
+    get:
+      summary: 按白名单条件分页查询活动
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - { name: team_id, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: query, in: query, schema: { type: string } }
+        - { name: sort, in: query, schema: { type: string, enum: [start_asc, start_desc] } }
+      responses: { '200': { description: 活动列表 } }
+    post:
+      summary: 创建活动草稿
+      parameters: [{ $ref: '#/components/parameters/RequestID' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateActivity' }
+      responses: { '201': { description: 活动已创建 }, '400': { $ref: '#/components/responses/Error' } }
+  /activities/{activityID}:
+    get:
+      summary: 获取活动、岗位、认领和风险详情
+      parameters: [{ $ref: '#/components/parameters/ActivityID' }]
+      responses: { '200': { description: 活动详情 }, '404': { $ref: '#/components/responses/Error' } }
+  /activities/{activityID}/publish:
+    post:
+      summary: 发布活动
+      parameters: [{ $ref: '#/components/parameters/ActivityID' }]
+      responses: { '204': { description: 已发布 } }
+  /activities/{activityID}/cancel:
+    post:
+      summary: 取消活动并关闭全部岗位认领
+      parameters: [{ $ref: '#/components/parameters/ActivityID' }]
+      responses: { '204': { description: 已取消 } }
+  /activities/{activityID}/complete:
+    post:
+      summary: 完成活动并校验未解除风险已经交接
+      parameters: [{ $ref: '#/components/parameters/ActivityID' }]
+      responses: { '204': { description: 已完成 }, '422': { $ref: '#/components/responses/Error' } }
+  /activities/{activityID}/slots:
+    post:
+      summary: 创建岗位与容量
+      parameters: [{ $ref: '#/components/parameters/ActivityID' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, capacity]
+              properties:
+                name: { type: string }
+                description: { type: string }
+                capacity: { type: integer, minimum: 1, maximum: 500 }
+      responses: { '201': { description: 岗位已创建 } }
+  /slots/{slotID}/claims:
+    post:
+      summary: 认领岗位，满员时进入候补，并校验时间冲突
+      parameters: [{ $ref: '#/components/parameters/SlotID' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '201': { description: 认领或候补记录 }, '409': { $ref: '#/components/responses/Error' } }
+  /claims/{claimID}/check-in:
+    post:
+      summary: 到场核验
+      parameters: [{ $ref: '#/components/parameters/ClaimID' }]
+      responses: { '204': { description: 已签到 } }
+  /claims/{claimID}/service/start:
+    post:
+      summary: 开始服务计时
+      parameters: [{ $ref: '#/components/parameters/ClaimID' }]
+      responses: { '201': { description: 服务记录已创建 } }
+  /service-records/{recordID}/end:
+    post:
+      summary: 结束服务并计算受限时长
+      parameters: [{ $ref: '#/components/parameters/RecordID' }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { photo_note: { type: string, maxLength: 1000 } } }
+      responses: { '200': { description: 待复核服务记录 }, '422': { $ref: '#/components/responses/Error' } }
+  /service-records/{recordID}/confirm:
+    post:
+      summary: 负责人确认服务记录
+      parameters: [{ $ref: '#/components/parameters/RecordID' }]
+      responses: { '204': { description: 已确认 } }
+  /service-records/{recordID}/corrections:
+    post:
+      summary: 为已确认记录创建不可覆盖的更正版本
+      parameters: [{ $ref: '#/components/parameters/RecordID' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [note, started_at, ended_at]
+              properties:
+                note: { type: string }
+                started_at: { type: string, format: date-time }
+                ended_at: { type: string, format: date-time }
+      responses: { '201': { description: 更正版本已提交 }, '422': { $ref: '#/components/responses/Error' } }
+  /risks:
+    post:
+      summary: 登记现场风险
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [activity_id, title, severity, description, owner_id, due_at]
+              properties:
+                activity_id: { type: string }
+                title: { type: string }
+                severity: { type: string, enum: [low, medium, high] }
+                description: { type: string }
+                owner_id: { type: string }
+                due_at: { type: string, format: date-time }
+      responses: { '201': { description: 风险已登记 } }
+  /handoffs:
+    post:
+      summary: 创建未完成风险交接
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [risk_id, to_user_id, note, due_at]
+              properties:
+                risk_id: { type: string }
+                to_user_id: { type: string }
+                note: { type: string }
+                due_at: { type: string, format: date-time }
+      responses: { '201': { description: 交接已创建 } }
+  /handoffs/{handoffID}/acknowledge:
+    post:
+      summary: 接班成员确认风险交接
+      parameters: [{ name: handoffID, in: path, required: true, schema: { type: string } }]
+      responses: { '204': { description: 交接已确认 } }
+  /teams/{teamID}/dashboard:
+    get:
+      summary: 负责人待确认、缺岗、过期交接和复盘工作台
+      parameters: [{ $ref: '#/components/parameters/TeamID' }]
+      responses: { '200': { description: 工作台聚合数据 }, '403': { $ref: '#/components/responses/Error' } }
+  /notices:
+    get:
+      summary: 当前用户站内提醒
+      responses: { '200': { description: 提醒列表 } }
+  /profiles/{userID}/certificate:
+    get:
+      summary: 导出已确认服务证明 CSV
+      parameters: [{ name: userID, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: CSV 服务证明, content: { text/csv: { schema: { type: string } } } }
+components:
+  parameters:
+    Page: { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+    PageSize: { name: page_size, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+    TeamID: { name: teamID, in: path, required: true, schema: { type: string } }
+    MembershipID: { name: membershipID, in: path, required: true, schema: { type: string } }
+    ActivityID: { name: activityID, in: path, required: true, schema: { type: string } }
+    SlotID: { name: slotID, in: path, required: true, schema: { type: string } }
+    ClaimID: { name: claimID, in: path, required: true, schema: { type: string } }
+    RecordID: { name: recordID, in: path, required: true, schema: { type: string } }
+    RequestID: { name: X-Request-ID, in: header, schema: { type: string, maxLength: 128 } }
+    IdempotencyKey: { name: Idempotency-Key, in: header, schema: { type: string, maxLength: 128 } }
+  responses:
+    Error:
+      description: 稳定错误结构
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+  schemas:
+    CreateActivity:
+      type: object
+      required: [team_id, title, start_at, end_at, location]
+      properties:
+        team_id: { type: string }
+        title: { type: string, minLength: 2, maxLength: 120 }
+        description: { type: string, maxLength: 2000 }
+        start_at: { type: string, format: date-time }
+        end_at: { type: string, format: date-time }
+        location: { type: string, maxLength: 200 }
+        material_needs: { type: array, items: { type: string } }
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            fields: { type: object, additionalProperties: { type: string } }
+            request_id: { type: string }

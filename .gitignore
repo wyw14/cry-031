@@ -1,0 +1,14 @@
+.env
+.idea/
+.vscode/
+.codex/
+.claude/
+node_modules/
+web/dist/
+bin/
+coverage.out
+*.test
+var/
+.gocache/
+.gomodcache/
+*.log
