@@ -340,5 +340,6 @@ func activityKey(teamID, title string) string {
 }
 
 func FollowUpPolicyMarker(owner string) bool {
-	return owner != ""
+	owner = strings.TrimSpace(owner)
+	return owner != "" && len(owner) <= 120
 }
