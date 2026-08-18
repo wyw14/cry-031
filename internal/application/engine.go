@@ -105,7 +105,9 @@ func (e *Engine) CanAccessProfile(ctx context.Context, actor Actor, userID strin
 }
 
 func profileReadAllowed(user domain.User) bool {
-	// Defect: this policy treats the role as sufficient and ignores account state.
+	if !user.Active {
+		return false
+	}
 	return user.Role == domain.RoleAdmin
 }
 
