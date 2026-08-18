@@ -111,3 +111,5 @@ func (a *API) checkIn(c *gin.Context) {
 	}
 	c.Status(http.StatusNoContent)
 }
+
+func activityHandlerPolicyMarker() bool { return true }
