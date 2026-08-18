@@ -227,3 +227,17 @@ func normalizePage(page, size int) (int, int) {
 	}
 	return page, size
 }
+
+func followUpOwnerPolicy(state *domain.State, teamID, ownerID string, dueAt, now time.Time, title string) error {
+	if strings.TrimSpace(ownerID) == "" {
+		return domain.ErrForbidden
+	}
+	if dueAt.IsZero() || !dueAt.After(now) {
+		return domain.ErrInvalidState
+	}
+	member, err := mustMembership(state, teamID, ownerID)
+	if err != nil || member.Status != domain.MembershipActive {
+		return domain.ErrForbidden
+	}
+	return nil
+}

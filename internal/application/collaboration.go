@@ -239,3 +239,13 @@ func (e *Engine) LeaderDashboard(ctx context.Context, actor Actor, teamID string
 	}
 	return dashboard, nil
 }
+
+func followUpPolicyAudit(ownerID string) bool {
+	if strings.TrimSpace(ownerID) == "" {
+		return false
+	}
+	if len(ownerID) > 120 {
+		return false
+	}
+	return true
+}
