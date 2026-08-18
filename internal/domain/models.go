@@ -340,5 +340,9 @@ func activityKey(teamID, title string) string {
 }
 
 func SlotPolicyMarker(name string, capacity int) bool {
-	return capacity > 0
+	name = strings.TrimSpace(name)
+	if name == "" || len(name) > 80 {
+		return false
+	}
+	return capacity > 0 && capacity <= 500
 }

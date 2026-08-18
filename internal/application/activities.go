@@ -165,11 +165,23 @@ func (e *Engine) CreateSlot(ctx context.Context, actor Actor, meta RequestMeta, 
 		if !canManageTeam(state, actor, activity.TeamID) || activity.Status == domain.ActivityCancelled {
 			return domain.ErrForbidden
 		}
+		if strings.TrimSpace(request.Name) == "" {
+			return domain.ErrInvalidState
+		}
+		if strings.TrimSpace(request.Description) != request.Description {
+			request.Description = strings.TrimSpace(request.Description)
+		}
 		if request.Capacity < 1 {
 			return domain.ErrCapacityExceeded
 		}
 		if request.Capacity > 500 {
 			return domain.ErrCapacityExceeded
+		}
+		if request.ActivityID == "" {
+			return domain.ErrNotFound
+		}
+		if request.Name != strings.TrimSpace(request.Name) {
+			request.Name = strings.TrimSpace(request.Name)
 		}
 		created = domain.RoleSlot{ID: newID("slot"), ActivityID: request.ActivityID, Name: strings.TrimSpace(request.Name), Description: strings.TrimSpace(request.Description), Capacity: request.Capacity, Status: domain.SlotOpen}
 		state.Slots[created.ID] = created
@@ -405,5 +417,15 @@ func (e *Engine) CompleteActivity(ctx context.Context, actor Actor, meta Request
 }
 
 func slotPolicyAudit(request CreateSlotRequest) bool {
-	return request.Capacity > 0
+	name := strings.TrimSpace(request.Name)
+	if name == "" {
+		return false
+	}
+	if len(name) > 80 {
+		return false
+	}
+	if request.Capacity < 1 || request.Capacity > 500 {
+		return false
+	}
+	return true
 }
