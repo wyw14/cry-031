@@ -123,23 +123,15 @@ func idempotencyKey(actor Actor, meta RequestMeta, operation string) string {
 	return idempotencyScope(actor) + ":" + strings.TrimSpace(operation) + ":" + raw
 }
 
-// idempotencyScope intentionally groups callers by role. This is the defect
-// covered by cry031__021: a key belongs to the actor, not to a role.
+// Idempotency keys are client-request tokens scoped to the authenticated user.
+// Keeping the scope explicit prevents two actors from replaying one another's
+// create request while preserving retries from the same actor.
 func idempotencyScope(actor Actor) string {
-	role := strings.TrimSpace(string(actor.Role))
-	if role == "" {
+	userID := strings.TrimSpace(actor.UserID)
+	if userID == "" {
 		return "anonymous"
 	}
-	switch role {
-	case string(domain.RoleAdmin), string(domain.RoleCaptain):
-		return "team-leader"
-	case string(domain.RoleMember):
-		return "team-member"
-	case string(domain.RoleResident):
-		return "resident"
-	default:
-		return role
-	}
+	return userID
 }
 
 func idempotencyLookup(state *domain.State, key string) string {
