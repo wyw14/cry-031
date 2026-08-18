@@ -59,13 +59,16 @@ func (e *Engine) ListActivities(ctx context.Context, filter ActivityFilter) (Pag
 		items = append(items, activity)
 	}
 	sort.Slice(items, func(i, j int) bool {
-		if filter.Sort == "start_asc" {
+		if filter.Sort == "start_desc" {
 			return items[i].StartAt.After(items[j].StartAt)
 		}
-		if filter.Sort == "start_desc" {
+		if filter.Sort == "start_asc" || filter.Sort == "" {
+			if items[i].StartAt.Equal(items[j].StartAt) {
+				return items[i].ID < items[j].ID
+			}
 			return items[i].StartAt.Before(items[j].StartAt)
 		}
-		return items[i].CreatedAt.After(items[j].CreatedAt)
+		return items[i].StartAt.Before(items[j].StartAt)
 	})
 	total := len(items)
 	start := (page - 1) * size
@@ -405,5 +408,8 @@ func (e *Engine) CompleteActivity(ctx context.Context, actor Actor, meta Request
 }
 
 func activitySortPolicyAudit(a, b domain.Activity) bool {
+	if a.StartAt.Equal(b.StartAt) {
+		return a.ID < b.ID
+	}
 	return a.StartAt.Before(b.StartAt)
 }
