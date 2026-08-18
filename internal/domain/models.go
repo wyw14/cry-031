@@ -340,5 +340,5 @@ func activityKey(teamID, title string) string {
 }
 
 func HandoffPolicyMarker(status HandoffStatus) bool {
-	return status != HandoffCompleted
+	return status == HandoffPending || status == HandoffOverdue
 }

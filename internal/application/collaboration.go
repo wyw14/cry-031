@@ -146,8 +146,14 @@ func (e *Engine) AcknowledgeHandoff(ctx context.Context, actor Actor, meta Reque
 		if handoff.ToUserID != actor.UserID {
 			return domain.ErrForbidden
 		}
-		if handoff.Status == domain.HandoffCompleted {
-			return nil
+		if handoff.Status != domain.HandoffPending && handoff.Status != domain.HandoffOverdue {
+			return domain.ErrForbidden
+		}
+		if handoff.AckAt != nil {
+			return domain.ErrConflict
+		}
+		if handoff.DueAt.IsZero() {
+			return domain.ErrInvalidState
 		}
 		handoff.Status = domain.HandoffAcknowledged
 		handoff.AckAt = &now
