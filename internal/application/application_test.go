@@ -296,6 +296,30 @@ func TestIdempotentActivityCreationReturnsSameResource(t *testing.T) {
 	}
 }
 
+func TestIdempotencyKeyScopedPerActor(t *testing.T) {
+	engine, store, clock := fixture()
+	request := CreateActivityRequest{TeamID: "team-riverside", Title: "跨操作者幂等活动", StartAt: clock.Now().Add(3 * time.Hour), EndAt: clock.Now().Add(4 * time.Hour), Location: "服务站"}
+	key := "shared-client-key"
+	first, err := engine.CreateActivity(context.Background(), captain(), RequestMeta{RequestID: "captain-create", IdempotencyKey: key}, request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := engine.CreateActivity(context.Background(), Actor{UserID: "u-admin", Role: domain.RoleAdmin}, RequestMeta{RequestID: "admin-create", IdempotencyKey: key}, request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.ID == second.ID {
+		t.Fatalf("different actors reused activity %s", first.ID)
+	}
+	state, err := store.Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(state.Activities) != 4 {
+		t.Fatalf("activity count = %d, want 4", len(state.Activities))
+	}
+}
+
 func TestRiskHandoffBlocksResolutionUntilAcknowledged(t *testing.T) {
 	engine, store, _ := fixture()
 	err := engine.ResolveRisk(context.Background(), captain(), RequestMeta{RequestID: "resolve-before"}, "risk-railing", "已经围挡")

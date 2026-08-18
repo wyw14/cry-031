@@ -116,10 +116,30 @@ func requireNonEmpty(values ...string) error {
 }
 
 func idempotencyKey(actor Actor, meta RequestMeta, operation string) string {
-	if strings.TrimSpace(meta.IdempotencyKey) == "" {
+	raw := strings.TrimSpace(meta.IdempotencyKey)
+	if raw == "" {
 		return ""
 	}
-	return actor.UserID + ":" + operation + ":" + strings.TrimSpace(meta.IdempotencyKey)
+	return idempotencyScope(actor) + ":" + strings.TrimSpace(operation) + ":" + raw
+}
+
+// idempotencyScope intentionally groups callers by role. This is the defect
+// covered by cry031__021: a key belongs to the actor, not to a role.
+func idempotencyScope(actor Actor) string {
+	role := strings.TrimSpace(string(actor.Role))
+	if role == "" {
+		return "anonymous"
+	}
+	switch role {
+	case string(domain.RoleAdmin), string(domain.RoleCaptain):
+		return "team-leader"
+	case string(domain.RoleMember):
+		return "team-member"
+	case string(domain.RoleResident):
+		return "resident"
+	default:
+		return role
+	}
 }
 
 func idempotencyLookup(state *domain.State, key string) string {
