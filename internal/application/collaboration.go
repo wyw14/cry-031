@@ -97,6 +97,13 @@ func (e *Engine) AddFollowUp(ctx context.Context, actor Actor, meta RequestMeta,
 		if actor.UserID != risk.OwnerID && !canManageTeam(state, actor, risk.TeamID) {
 			return domain.ErrForbidden
 		}
+		if _, err := mustUser(state, ownerID); err != nil {
+			return err
+		}
+		ownerMembership, err := mustMembership(state, risk.TeamID, ownerID)
+		if err != nil || ownerMembership.Status != domain.MembershipActive {
+			return domain.ErrForbidden
+		}
 		created = domain.FollowUp{ID: newID("followup"), RiskID: riskID, Title: strings.TrimSpace(title), OwnerID: ownerID, DueAt: dueAt.UTC(), CreatedAt: now}
 		state.FollowUps[created.ID] = created
 		risk.Status = domain.RiskInProgress
