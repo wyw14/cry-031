@@ -123,23 +123,13 @@ func idempotencyKey(actor Actor, meta RequestMeta, operation string) string {
 	return idempotencyScope(actor) + ":" + strings.TrimSpace(operation) + ":" + raw
 }
 
-// idempotencyScope intentionally groups callers by role. This is the defect
-// covered by cry031__021: a key belongs to the actor, not to a role.
+// idempotencyScope namespaces an idempotency key by actor so the same
+// client key cannot collapse requests from different operators.
 func idempotencyScope(actor Actor) string {
-	role := strings.TrimSpace(string(actor.Role))
-	if role == "" {
-		return "anonymous"
+	if userID := strings.TrimSpace(actor.UserID); userID != "" {
+		return "actor:" + userID
 	}
-	switch role {
-	case string(domain.RoleAdmin), string(domain.RoleCaptain):
-		return "team-leader"
-	case string(domain.RoleMember):
-		return "team-member"
-	case string(domain.RoleResident):
-		return "resident"
-	default:
-		return role
-	}
+	return "anonymous"
 }
 
 func idempotencyLookup(state *domain.State, key string) string {
