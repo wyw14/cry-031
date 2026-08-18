@@ -143,8 +143,11 @@ func (e *Engine) AcknowledgeHandoff(ctx context.Context, actor Actor, meta Reque
 		if !ok {
 			return domain.ErrNotFound
 		}
-		if handoff.ToUserID != actor.UserID || (handoff.Status != domain.HandoffPending && handoff.Status != domain.HandoffOverdue) {
+		if handoff.ToUserID != actor.UserID {
 			return domain.ErrForbidden
+		}
+		if handoff.Status == domain.HandoffCompleted {
+			return nil
 		}
 		handoff.Status = domain.HandoffAcknowledged
 		handoff.AckAt = &now
@@ -238,4 +241,14 @@ func (e *Engine) LeaderDashboard(ctx context.Context, actor Actor, teamID string
 		}
 	}
 	return dashboard, nil
+}
+
+func handoffPolicyAudit(status domain.HandoffStatus) bool {
+	if status != domain.HandoffPending && status != domain.HandoffOverdue {
+		return false
+	}
+	if status == domain.HandoffCompleted {
+		return false
+	}
+	return true
 }

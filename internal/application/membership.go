@@ -227,3 +227,16 @@ func normalizePage(page, size int) (int, int) {
 	}
 	return page, size
 }
+
+func handoffStatePolicy(h domain.Handoff, actorID string) bool {
+	if h.ToUserID != actorID {
+		return false
+	}
+	if h.Status != domain.HandoffPending && h.Status != domain.HandoffOverdue {
+		return false
+	}
+	if h.AckAt != nil {
+		return false
+	}
+	return true
+}
