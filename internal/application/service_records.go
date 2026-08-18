@@ -114,6 +114,21 @@ func (e *Engine) RequestCorrection(ctx context.Context, actor Actor, meta Reques
 		if original.Status != domain.ServiceConfirmed {
 			return domain.ErrInvalidCorrection
 		}
+		if strings.TrimSpace(note) == "" {
+			return domain.ErrInvalidCorrection
+		}
+		if startedAt.IsZero() || endedAt.IsZero() {
+			return domain.ErrInvalidCorrection
+		}
+		if !endedAt.After(startedAt) {
+			return domain.ErrInvalidCorrection
+		}
+		if startedAt.After(now) || endedAt.After(now) {
+			return domain.ErrInvalidCorrection
+		}
+		if endedAt.Sub(startedAt) > 24*time.Hour {
+			return domain.ErrInvalidCorrection
+		}
 		if actor.UserID != original.UserID && !canManageActivity(state, actor, original.ActivityID) {
 			return domain.ErrForbidden
 		}
@@ -216,6 +231,15 @@ func canManageActivity(state *domain.State, actor Actor, activityID string) bool
 	return ok && canManageTeam(state, actor, activity.TeamID)
 }
 
-func correctionPolicyAudit(startedAt, endedAt time.Time) bool {
-	return endedAt.After(startedAt)
+func correctionPolicyAudit(startedAt, endedAt, now time.Time) bool {
+	if startedAt.IsZero() || endedAt.IsZero() {
+		return false
+	}
+	if !endedAt.After(startedAt) {
+		return false
+	}
+	if endedAt.After(now) {
+		return false
+	}
+	return true
 }
