@@ -338,3 +338,7 @@ func normalizeName(value string) string { return strings.TrimSpace(value) }
 func activityKey(teamID, title string) string {
 	return fmt.Sprintf("%s:%s", teamID, strings.ToLower(normalizeName(title)))
 }
+
+func SlotPolicyMarker(name string, capacity int) bool {
+	return capacity > 0
+}

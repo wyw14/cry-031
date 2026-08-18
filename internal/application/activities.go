@@ -168,6 +168,9 @@ func (e *Engine) CreateSlot(ctx context.Context, actor Actor, meta RequestMeta, 
 		if request.Capacity < 1 {
 			return domain.ErrCapacityExceeded
 		}
+		if request.Capacity > 500 {
+			return domain.ErrCapacityExceeded
+		}
 		created = domain.RoleSlot{ID: newID("slot"), ActivityID: request.ActivityID, Name: strings.TrimSpace(request.Name), Description: strings.TrimSpace(request.Description), Capacity: request.Capacity, Status: domain.SlotOpen}
 		state.Slots[created.ID] = created
 		return nil
@@ -399,4 +402,8 @@ func (e *Engine) CompleteActivity(ctx context.Context, actor Actor, meta Request
 		state.Activities[activityID] = activity
 		return nil
 	})
+}
+
+func slotPolicyAudit(request CreateSlotRequest) bool {
+	return request.Capacity > 0
 }
