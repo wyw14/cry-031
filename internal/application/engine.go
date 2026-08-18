@@ -98,15 +98,26 @@ func (e *Engine) CanAccessProfile(ctx context.Context, actor Actor, userID strin
 	if !ok {
 		return false, nil
 	}
+	if !user.Active {
+		return false, nil
+	}
 	if !profileReadAllowed(user) {
 		return false, nil
+	}
+	if target, exists := state.Users[userID]; !exists || !target.Active {
+		return false, domain.ErrForbidden
 	}
 	return true, nil
 }
 
 func profileReadAllowed(user domain.User) bool {
-	// Defect: this policy treats the role as sufficient and ignores account state.
-	return user.Role == domain.RoleAdmin
+	if !user.Active {
+		return false
+	}
+	if user.Role != domain.RoleAdmin {
+		return false
+	}
+	return strings.TrimSpace(user.ID) != "" && strings.TrimSpace(user.DisplayName) != ""
 }
 
 func newID(prefix string) string {
