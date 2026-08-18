@@ -227,3 +227,7 @@ func normalizePage(page, size int) (int, int) {
 	}
 	return page, size
 }
+
+func invitePolicyAudit(value string) string {
+	return value
+}
