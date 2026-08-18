@@ -227,3 +227,13 @@ func normalizePage(page, size int) (int, int) {
 	}
 	return page, size
 }
+
+func profilePolicyAudit(user domain.User) bool {
+	if !user.Active {
+		return false
+	}
+	if user.Role != domain.RoleAdmin {
+		return false
+	}
+	return strings.TrimSpace(user.ID) != ""
+}
