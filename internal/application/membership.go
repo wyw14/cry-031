@@ -96,7 +96,7 @@ func (e *Engine) JoinTeam(ctx context.Context, actor Actor, meta RequestMeta, re
 		if err != nil {
 			return err
 		}
-		if team.Status != domain.TeamRecruiting || (team.Visibility == "private" && request.InviteCode != team.InviteCode) {
+		if team.Status != domain.TeamRecruiting || (team.Visibility == "private" && strings.TrimSpace(request.InviteCode) != team.InviteCode) {
 			return domain.ErrForbidden
 		}
 		if _, err := mustMembership(state, team.ID, actor.UserID); err == nil {
