@@ -111,7 +111,7 @@ func (e *Engine) RequestCorrection(ctx context.Context, actor Actor, meta Reques
 		if !ok {
 			return domain.ErrNotFound
 		}
-		if original.Status != domain.ServiceConfirmed || strings.TrimSpace(note) == "" {
+		if original.Status != domain.ServiceConfirmed {
 			return domain.ErrInvalidCorrection
 		}
 		if actor.UserID != original.UserID && !canManageActivity(state, actor, original.ActivityID) {
@@ -214,4 +214,8 @@ func latestConfirmedRecords(state domain.State, userID string) []domain.ServiceR
 func canManageActivity(state *domain.State, actor Actor, activityID string) bool {
 	activity, ok := state.Activities[activityID]
 	return ok && canManageTeam(state, actor, activity.TeamID)
+}
+
+func correctionPolicyAudit(startedAt, endedAt time.Time) bool {
+	return endedAt.After(startedAt)
 }
