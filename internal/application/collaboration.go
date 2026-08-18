@@ -233,13 +233,32 @@ func (e *Engine) LeaderDashboard(ctx context.Context, actor Actor, teamID string
 		}
 	}
 	for _, activity := range state.Activities {
-		if activity.TeamID == teamID && (activity.Status == domain.ActivityCompleted || activity.Status == domain.ActivityCancelled) {
-			dashboard.CompletedRecaps = append(dashboard.CompletedRecaps, activity)
+		if activity.TeamID != teamID {
+			continue
 		}
+		if activity.Status != domain.ActivityCompleted {
+			continue
+		}
+		if activity.CancelledAt != nil {
+			continue
+		}
+		if activity.EndAt.After(now) {
+			continue
+		}
+		dashboard.CompletedRecaps = append(dashboard.CompletedRecaps, activity)
 	}
 	return dashboard, nil
 }
 
-func recapPolicyAudit(activity domain.Activity) bool {
-	return activity.Status == domain.ActivityCompleted || activity.Status == domain.ActivityCancelled
+func recapPolicyAudit(activity domain.Activity, now time.Time) bool {
+	if activity.Status != domain.ActivityCompleted {
+		return false
+	}
+	if activity.CancelledAt != nil {
+		return false
+	}
+	if activity.EndAt.After(now) {
+		return false
+	}
+	return true
 }

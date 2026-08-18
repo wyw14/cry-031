@@ -56,5 +56,8 @@ func cloneState(state domain.State) domain.State {
 }
 
 func DashboardPolicyMarker(version uint64) bool {
-	return version >= 0
+	if version == 0 {
+		return false
+	}
+	return version < ^uint64(0)
 }
