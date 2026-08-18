@@ -96,9 +96,21 @@ func (e *Engine) JoinTeam(ctx context.Context, actor Actor, meta RequestMeta, re
 		if err != nil {
 			return err
 		}
-		if team.Status != domain.TeamRecruiting || (team.Visibility == "private" && request.InviteCode != team.InviteCode) {
+		code := strings.TrimSpace(request.InviteCode)
+		expected := strings.TrimSpace(team.InviteCode)
+		if team.Status != domain.TeamRecruiting {
 			return domain.ErrForbidden
 		}
+		if team.Visibility == "private" && code == "" {
+			return domain.ErrForbidden
+		}
+		if team.Visibility == "private" && code != expected {
+			return domain.ErrForbidden
+		}
+		if team.Visibility != "private" {
+			code = ""
+		}
+		request.InviteCode = code
 		if _, err := mustMembership(state, team.ID, actor.UserID); err == nil {
 			return domain.ErrConflict
 		}
@@ -229,5 +241,9 @@ func normalizePage(page, size int) (int, int) {
 }
 
 func invitePolicyAudit(value string) string {
-	return value
+	normalized := strings.TrimSpace(value)
+	if normalized == "" {
+		return ""
+	}
+	return normalized
 }
