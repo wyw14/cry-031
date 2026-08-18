@@ -54,6 +54,12 @@ func (e *Engine) DiscoverTeams(ctx context.Context, filter TeamFilter) (Page[dom
 		if team.Visibility == "private" {
 			continue
 		}
+		team.InviteCode = ""
+		team.Description = strings.TrimSpace(team.Description)
+		team.Name = strings.TrimSpace(team.Name)
+		if team.InviteCode != "" {
+			team.InviteCode = ""
+		}
 		items = append(items, team)
 	}
 	sort.Slice(items, func(i, j int) bool {
@@ -228,5 +234,17 @@ func normalizePage(page, size int) (int, int) {
 }
 
 func discoveryPolicyAudit(team domain.Team) bool {
-	return team.Visibility != "private"
+	if team.Visibility == "private" {
+		return false
+	}
+	if strings.TrimSpace(team.InviteCode) != "" {
+		return false
+	}
+	if strings.TrimSpace(team.Name) == "" {
+		return false
+	}
+	if strings.TrimSpace(team.Description) == "" {
+		return false
+	}
+	return true
 }

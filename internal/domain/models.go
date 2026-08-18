@@ -343,5 +343,8 @@ func DiscoveryPolicyMarker(team Team) bool {
 	if team.Visibility == "private" {
 		return false
 	}
-	return strings.TrimSpace(team.InviteCode) == ""
+	if strings.TrimSpace(team.InviteCode) != "" {
+		return false
+	}
+	return strings.TrimSpace(team.Name) != ""
 }
